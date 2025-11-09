@@ -29,6 +29,13 @@ async function run() {
         const result = await porductCollection.find().sort({serviceReview: -1}).limit(6).toArray()
         res.send(result)
     })
+    // get service by category
+    app.get('/services', async (req, res) => {
+  const category = req.query.category;
+  const query = category ? { category } : {}; // filter by category if given
+  const result = await porductCollection.find(query).toArray();
+  res.send(result);
+});
     app.get('/services', async(req, res)=>{
         const result = await porductCollection.find().toArray()
         res.send(result)
