@@ -39,6 +39,8 @@ async function run() {
       const result = await porductCollection.find(query).toArray();
       res.send(result);
     });
+
+    // get service details
     app.get("/services/:id", async (req, res) => {
       const { id } = req.params;
       const objectedId = new ObjectId(id);
@@ -57,6 +59,15 @@ async function run() {
         success: true,
         result,
       });
+    });
+
+    // fetch emailed service to ui
+    app.get("/my-services", async (req, res) => {
+      const email = req.query.email;
+      const result = await porductCollection
+        .find({ provideremail: email })
+        .toArray();
+      res.send(result);
     });
 
     await client.db("admin").command({ ping: 1 });
