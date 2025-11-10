@@ -70,6 +70,18 @@ async function run() {
       res.send(result);
     });
 
+    // update service
+    app.put("/services/:id", async (req, res) => {
+      const { id } = req.params;
+      const data = req.body;
+      const objectId = { _id: new ObjectId(id) };
+      const update = {
+        $set: data,
+      };
+      const result = await porductCollection.updateOne(objectId, update);
+      res.send(result);
+    });
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
