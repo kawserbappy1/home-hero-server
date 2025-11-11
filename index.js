@@ -22,6 +22,7 @@ async function run() {
   try {
     const db = client.db("hero-home");
     const porductCollection = db.collection("herohomecollection");
+    const bookingColooection = db.collection("bookings");
 
     // get top rated data from database
     app.get("/tr-services", async (req, res) => {
@@ -81,12 +82,77 @@ async function run() {
       const result = await porductCollection.updateOne(objectId, update);
       res.send(result);
     });
-    //  Delete service from db
 
+    //  Delete service from db
     app.delete("/services/:id", async (req, res) => {
       const { id } = req.params;
       const objectId = { _id: new ObjectId(id) };
       const result = await porductCollection.deleteOne(objectId);
+      res.send(result);
+    });
+
+    // store booking data
+    app.post("/booking", async (req, res) => {
+      const data = req.body;
+      const result = await bookingColooection.insertOne(data);
+      res.send(result);
+    });
+
+    // get bookings by user email
+    app.get("/booking", async (req, res) => {
+      const email = req.query.email;
+      const result = await bookingColooection
+        .find({ userEmail: email })
+        .toArray();
+      res.send(result);
+    });
+    // Update booking status
+    app.patch("/booking/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { status } = req.body;
+
+        // Validate the status
+        if (
+          !status ||
+          !["pending", "confirmed", "cancelled"].includes(status)
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid status value",
+          });
+        }
+
+        const result = await bookingColooection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { status: status } }
+        );
+
+        if (result.modifiedCount === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "Booking not found",
+          });
+        }
+
+        res.json({
+          success: true,
+          message: "Booking status updated successfully",
+        });
+      } catch (error) {
+        console.error("Error updating booking:", error);
+        res.status(500).json({
+          success: false,
+          error: "Failed to update booking status",
+        });
+      }
+    });
+    // Delete a booking
+    app.delete("/booking/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await bookingColooection.deleteOne({
+        _id: new ObjectId(id),
+      });
       res.send(result);
     });
 
