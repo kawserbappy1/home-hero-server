@@ -156,6 +156,71 @@ async function run() {
       res.send(result);
     });
 
+    // Add review to service
+    app.post("/reviews", async (req, res) => {
+      try {
+        const reviewData = req.body;
+
+        // Validate required fields
+        if (
+          !reviewData.serviceId ||
+          !reviewData.userEmail ||
+          !reviewData.rating ||
+          !reviewData.comment
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "Missing required fields",
+          });
+        }
+
+        const review = {
+          ...reviewData,
+          reviewDate: new Date().toISOString(),
+          userName: reviewData.userName || "Anonymous",
+          verified: true, // Mark as verified since it comes from actual booking
+        };
+
+        const result = await db.collection("reviews").insertOne(review);
+
+        res.json({
+          success: true,
+          message: "Review submitted successfully",
+          reviewId: result.insertedId,
+        });
+      } catch (error) {
+        console.error("Error submitting review:", error);
+        res.status(500).json({
+          success: false,
+          error: "Failed to submit review",
+        });
+      }
+    });
+
+    // Get reviews for a specific service
+    app.get("/reviews/:serviceId", async (req, res) => {
+      try {
+        const { serviceId } = req.params;
+
+        const reviews = await db
+          .collection("reviews")
+          .find({ serviceId: serviceId })
+          .sort({ reviewDate: -1 })
+          .toArray();
+
+        res.json({
+          success: true,
+          data: reviews,
+        });
+      } catch (error) {
+        console.error("Error fetching reviews:", error);
+        res.status(500).json({
+          success: false,
+          error: "Failed to fetch reviews",
+        });
+      }
+    });
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
