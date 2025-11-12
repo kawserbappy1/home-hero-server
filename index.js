@@ -157,6 +157,7 @@ async function run() {
     });
 
     // Add review to service
+
     app.post("/reviews", async (req, res) => {
       try {
         const reviewData = req.body;
@@ -176,17 +177,41 @@ async function run() {
 
         const review = {
           ...reviewData,
+          rating: Number(reviewData.rating),
           reviewDate: new Date().toISOString(),
           userName: reviewData.userName || "Anonymous",
-          verified: true, // Mark as verified since it comes from actual booking
+          verified: true,
         };
 
+        // Insert the review
         const result = await db.collection("reviews").insertOne(review);
+
+        // 🔹 Recalculate the average rating and review count for the service
+        const allReviews = await db
+          .collection("reviews")
+          .find({ serviceId: reviewData.serviceId })
+          .toArray();
+
+        const totalRatings = allReviews.reduce((sum, r) => sum + r.rating, 0);
+        const avgRating = totalRatings / allReviews.length;
+
+        // 🔹 Update the service document in your herohomecollection
+        await db.collection("herohomecollection").updateOne(
+          { _id: new ObjectId(reviewData.serviceId) },
+          {
+            $set: {
+              serviceReview: avgRating.toFixed(1),
+              reviewCount: allReviews.length,
+            },
+          }
+        );
 
         res.json({
           success: true,
           message: "Review submitted successfully",
           reviewId: result.insertedId,
+          newAverage: avgRating.toFixed(1),
+          reviewCount: allReviews.length,
         });
       } catch (error) {
         console.error("Error submitting review:", error);
