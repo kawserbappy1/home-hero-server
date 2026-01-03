@@ -11,3 +11,4 @@ config/secret.js
 keys/
 *.pem
 *.key
+.vercel

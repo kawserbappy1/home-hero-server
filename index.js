@@ -1,13 +1,14 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.rmpdbzj.mongodb.net/?appName=Cluster0`;
+
+const uri = process.env.MONGODB_URI;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -23,7 +24,43 @@ async function run() {
     const db = client.db("hero-home");
     const porductCollection = db.collection("herohomecollection");
     const bookingColooection = db.collection("bookings");
+    const userCollection = db.collection("users");
 
+    // user related api
+    app.post("/users", async (req, res) => {
+      try {
+        const userData = req.body;
+        // existing users
+        const query = { email: userData.email };
+        const existingUser = await userCollection.findOne(query);
+        if (existingUser) {
+          await userCollection.updateOne(query, {
+            $set: {
+              last_logged_at: new Date().toISOString(),
+            },
+          });
+          return res.send({
+            success: true,
+            message: "User already exists",
+          });
+        }
+        // new user
+        const newUser = {
+          ...userData,
+          role: "user",
+          createdAt: new Date().toISOString(),
+          last_logged_at: new Date().toISOString(),
+        };
+        const result = await userCollection.insertOne(newUser);
+        res.send({
+          success: true,
+          insertedId: result.insertedId,
+          message: "User Created Successfully",
+        });
+      } catch (err) {
+        res.status(500).send({ message: "internal server error" });
+      }
+    });
     // get top rated data from database
     app.get("/tr-services", async (req, res) => {
       const result = await porductCollection
@@ -195,7 +232,7 @@ async function run() {
         const totalRatings = allReviews.reduce((sum, r) => sum + r.rating, 0);
         const avgRating = totalRatings / allReviews.length;
 
-        // 🔹 Update the service document in your herohomecollection
+        //  Update the service document in your herohomecollection
         await db.collection("herohomecollection").updateOne(
           { _id: new ObjectId(reviewData.serviceId) },
           {
@@ -246,7 +283,7 @@ async function run() {
       }
     });
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
@@ -258,9 +295,9 @@ async function run() {
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
-  res.send("Server is running successfully");
+  res.send("Hero Home is running successfully");
 });
 
 app.listen(port, () => {
-  console.log(`This server is running from port no ${port}`);
+  console.log(`Hero Home is running from port no ${port}`);
 });
